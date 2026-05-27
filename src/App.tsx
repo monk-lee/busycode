@@ -9,7 +9,7 @@ const introDelay = 340
 const optionsDelay = 760
 const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 const claudeThinkingFrames = ['✻', '✳', '✢', '·']
-const defaultCodexPrompt = 'Improve BusyCode CLI simulator and verify desktop TUI'
+const defaultCodexPrompt = 'Improve BusyCode simulator and verify desktop TUI'
 const defaultClaudePrompt = 'Audit BusyCode and make the fake agent look convincing'
 const defaultGeminiPrompt = 'Recreate Gemini CLI status and transcript density'
 const defaultOpenCodePrompt = 'Recreate OpenCode TUI styling and keep the fake agent busy'
@@ -234,7 +234,7 @@ const buildOpenCodeSession = (prompt: string, agentMode: OpenCodeAgentMode): Ope
 }
 
 const buildGeminiSearchTarget = (prompt: string) => {
-  const trimmed = prompt.trim() || 'busycode-cli'
+  const trimmed = prompt.trim() || 'busycode'
   return trimmed.length <= 28 ? trimmed : trimmed.slice(0, 28)
 }
 
@@ -250,7 +250,7 @@ const buildGeminiTimeline = (prompt: string): GeminiTimelineEvent[] => {
     },
     {
       kind: 'tool',
-      title: `✓ Shell rg "${searchTarget}" src/App.tsx [current working directory ~/.../busycode-cli]`,
+      title: `✓ Shell rg "${searchTarget}" src/App.tsx [current working directory ~/.../busycode]`,
       lines: [
         'type GeminiCliTuiProps = {',
         "const geminiTips = ['1. /help for more information', ...]",
@@ -386,7 +386,7 @@ const claudeTimeline: ClaudeTimelineEvent[] = [
     title: 'Explore(Deep codebase exploration)',
     lines: [
       '└ Read(vite.config.ts)',
-      '  Bash(find /Users/my/Desktop/job/monklabs/busycode-cli/src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
+      '  Bash(find /Users/my/Desktop/job/monklabs/busycode/src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
       '  Running…',
       '  +4 more tool uses (ctrl+o to expand)',
     ],
@@ -912,7 +912,7 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
             <span>gpt-5.4 high</span>
             <span className='codex-command'>/model</span>
             <span className='codex-muted'>directory</span>
-            <span>~/.../busycode-cli</span>
+            <span>~/.../busycode</span>
             <span className='codex-mode'>Panic Work Mode</span>
           </div>
           <p className='codex-session-tip'>
@@ -1196,7 +1196,7 @@ function ClaudeCodeTui({ onExit, screenRef, displayName }: ClaudeCodeTuiProps) {
                 <p className='claude-welcome'>Welcome back {displayName}!</p>
                 <ClaudePixelAvatar />
                 <p className='claude-meta'>Opus 4.6 (1M context) with hi… · Claude Max · {displayName}</p>
-                <p className='claude-path'>~/.../busycode-cli</p>
+                <p className='claude-path'>~/.../busycode</p>
               </div>
 
               <div className='claude-pane claude-pane-right'>
@@ -1339,7 +1339,7 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
   ])
   const [activeEvent, setActiveEvent] = useState<GeminiTimelineEvent | null>(() => defaultGeminiTimeline[0])
   const [timeline, setTimeline] = useState<GeminiTimelineEvent[]>(() => defaultGeminiTimeline)
-  const workspacePath = '~/.../busycode-cli'
+  const workspacePath = '~/.../busycode'
 
   const updateDraft = (nextDraft: string) => {
     draftRef.current = nextDraft
@@ -1754,7 +1754,7 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
   const [activeText, setActiveText] = useState(defaultOpenCodeSession.timeline[0].activeText)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [sessionData, setSessionData] = useState<OpenCodeSessionData | null>(() => defaultOpenCodeSession)
-  const workspacePath = '~/.../busycode-cli'
+  const workspacePath = '~/.../busycode'
   const sessionModel = 'claude-sonnet-4'
   const sessionProvider = 'opencode zen'
   const sessionVariant = 'max'
@@ -2324,7 +2324,7 @@ function App() {
         readOnly
       />
       <pre>
-        <span className='prompt'>my@busycode-cli</span>
+        <span className='prompt'>my@busycode</span>
         <span>:</span>
         <span className='path'>~</span>
         <span>$ </span>
