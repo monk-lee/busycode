@@ -1,4 +1,4 @@
-# BusyCode CLI
+# BusyCode
 
 BusyCode is a fake AI agent CLI simulator. It recreates the feel of familiar terminal agents and immediately looks like it is exploring, thinking, editing, and verifying a codebase.
 
