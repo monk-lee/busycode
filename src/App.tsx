@@ -361,11 +361,11 @@ const buildGeminiTimeline = (prompt: string): GeminiTimelineEvent[] => {
       kind: 'tool',
       title: '✓ Shell pnpm lint && pnpm run build',
       lines: [
-        'worker-configuration.d.ts: existing warnings only',
-        'vite client build completed',
-        'wrangler debug log write remains sandbox-limited',
+        'ESLint completed without generated worker type warnings',
+        'Vite static build completed',
+        'Wrangler deploy config points at static dist assets',
       ],
-      result: 'lint/build green; wrangler log write still sandbox-limited',
+      result: 'lint/build green; static-only deploy ready',
       duration: 2100,
     },
     {
@@ -509,11 +509,11 @@ function ClaudePixelAvatar() {
 const codexTimeline: CodexTimelineEvent[] = [
   {
     text: 'Explored workspace',
-    detail: 'src/App.tsx, src/App.css, src/index.css, worker/index.ts',
+    detail: 'src/App.tsx, src/App.css, src/index.css, wrangler.jsonc',
     output: [
       'Search "useEffect|useLayoutEffect|setInterval" in src',
       'Read src/App.tsx, src/App.css',
-      'List worker',
+      'Read wrangler.jsonc',
     ],
     duration: 850,
   },
@@ -663,11 +663,11 @@ const codexTimeline: CodexTimelineEvent[] = [
   },
   {
     text: 'Ran pnpm lint',
-    detail: 'ESLint reports generated type warnings only',
+    detail: 'ESLint reports no blocking issues',
     output: [
-      'worker-configuration.d.ts',
-      '  9611:44  warning  Unused eslint-disable directive',
-      '  9627:70  warning  Unused eslint-disable directive',
+      'src/App.tsx checked',
+      'src/App.css checked',
+      'static-only Cloudflare config checked',
     ],
     result: '✓ • 1.6s',
     duration: 2100,
