@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 const SITE_URL = 'https://busycode.monklabs.dev/'
 const SITE_HOST = 'busycode.monklabs.dev'
 const MANIFEST_PATH = '/site.webmanifest'
+const OG_IMAGE_PATH = '/og-image.png'
+const OG_IMAGE_URL = `${SITE_URL.slice(0, -1)}${OG_IMAGE_PATH}`
 
 async function readText(path) {
   return readFile(path, 'utf8')
@@ -59,6 +61,18 @@ function hasLink(html, rel, href) {
   return pattern.test(html)
 }
 
+function readPngDimensions(buffer) {
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  if (buffer.length < 24 || !buffer.subarray(0, 8).equals(pngSignature)) {
+    return undefined
+  }
+
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  }
+}
+
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -110,13 +124,27 @@ function validateIndexHtml(html, issues, label, { built = false } = {}) {
     issues.push(`${label} must link ${MANIFEST_PATH}`)
   }
 
+  if (!hasLink(html, 'icon', '/favicon-32.png')) {
+    issues.push(`${label} must link /favicon-32.png`)
+  }
+
+  if (!hasLink(html, 'apple-touch-icon', '/apple-touch-icon.png')) {
+    issues.push(`${label} must link /apple-touch-icon.png`)
+  }
+
   const openGraphChecks = [
     ['property', 'og:type', 'website'],
     ['property', 'og:site_name', 'BusyCode'],
     ['property', 'og:title', 'BusyCode - Fake AI Agent CLI Simulator'],
     ['property', 'og:url', SITE_URL],
-    ['name', 'twitter:card', 'summary'],
+    ['property', 'og:image', OG_IMAGE_URL],
+    ['property', 'og:image:secure_url', OG_IMAGE_URL],
+    ['property', 'og:image:type', 'image/png'],
+    ['property', 'og:image:width', '1200'],
+    ['property', 'og:image:height', '630'],
+    ['name', 'twitter:card', 'summary_large_image'],
     ['name', 'twitter:title', 'BusyCode - Fake AI Agent CLI Simulator'],
+    ['name', 'twitter:image', OG_IMAGE_URL],
   ]
 
   for (const [keyType, key, expected] of openGraphChecks) {
@@ -127,10 +155,12 @@ function validateIndexHtml(html, issues, label, { built = false } = {}) {
 
   for (const [keyType, key] of [
     ['property', 'og:description'],
+    ['property', 'og:image:alt'],
     ['name', 'twitter:description'],
+    ['name', 'twitter:image:alt'],
   ]) {
     const content = findMetaContent(html, keyType, key)
-    if (!content || !content.includes('AI coding agent')) {
+    if (!content || !content.includes(key.includes('image') ? 'BusyCode' : 'AI coding agent')) {
       issues.push(`${label} must include a useful ${key}`)
     }
   }
@@ -145,6 +175,9 @@ function validateIndexHtml(html, issues, label, { built = false } = {}) {
     }
     if (webApplication.url !== SITE_URL) {
       issues.push(`${label} JSON-LD WebApplication url must be ${SITE_URL}`)
+    }
+    if (webApplication.image !== OG_IMAGE_URL) {
+      issues.push(`${label} JSON-LD WebApplication image must be ${OG_IMAGE_URL}`)
     }
     if (webApplication.creator?.name !== 'MonkLabs' || webApplication.creator?.url !== 'https://monklabs.dev/') {
       issues.push(`${label} JSON-LD creator must point to MonkLabs`)
@@ -200,6 +233,16 @@ function validateManifest(manifest, issues, label) {
 
   if (!manifest.description?.includes('fake AI agent CLI simulator')) {
     issues.push(`${label} must describe BusyCode`)
+  }
+
+  const icons = manifest.icons ?? []
+  for (const [src, sizes] of [
+    ['/icon-192.png', '192x192'],
+    ['/icon-512.png', '512x512'],
+  ]) {
+    if (!icons.some((icon) => icon.src === src && icon.sizes === sizes && icon.type === 'image/png')) {
+      issues.push(`${label} must include icon ${src} ${sizes}`)
+    }
   }
 }
 
@@ -317,6 +360,48 @@ async function validateCopiedAsset(root, issues, relativePath, validator) {
   validator(distText, issues, `dist/${relativePath}`)
 }
 
+async function validatePngAsset(root, issues, relativePath, expectedWidth, expectedHeight) {
+  const publicPath = join(root, 'public', relativePath)
+  const distPath = join(root, 'dist', relativePath)
+  let publicBuffer
+  let distBuffer
+
+  try {
+    publicBuffer = await readFile(publicPath)
+  } catch {
+    issues.push(`public/${relativePath} is missing`)
+  }
+
+  try {
+    distBuffer = await readFile(distPath)
+  } catch {
+    issues.push(`dist/${relativePath} is missing`)
+  }
+
+  for (const [label, buffer] of [
+    [`public/${relativePath}`, publicBuffer],
+    [`dist/${relativePath}`, distBuffer],
+  ]) {
+    if (!buffer) {
+      continue
+    }
+
+    const dimensions = readPngDimensions(buffer)
+    if (!dimensions) {
+      issues.push(`${label} must be a PNG image`)
+      continue
+    }
+
+    if (dimensions.width !== expectedWidth || dimensions.height !== expectedHeight) {
+      issues.push(`${label} must be ${expectedWidth}x${expectedHeight}`)
+    }
+  }
+
+  if (publicBuffer && distBuffer && !publicBuffer.equals(distBuffer)) {
+    issues.push(`dist/${relativePath} must match public/${relativePath}`)
+  }
+}
+
 export async function collectPublicReadyIssues(root = process.cwd()) {
   const issues = []
 
@@ -360,6 +445,12 @@ export async function collectPublicReadyIssues(root = process.cwd()) {
   if (publicManifest && distManifest && JSON.stringify(publicManifest) !== JSON.stringify(distManifest)) {
     issues.push('dist/site.webmanifest must match public/site.webmanifest')
   }
+
+  await validatePngAsset(root, issues, 'favicon-32.png', 32, 32)
+  await validatePngAsset(root, issues, 'apple-touch-icon.png', 180, 180)
+  await validatePngAsset(root, issues, 'icon-192.png', 192, 192)
+  await validatePngAsset(root, issues, 'icon-512.png', 512, 512)
+  await validatePngAsset(root, issues, 'og-image.png', 1200, 630)
 
   for (const relativePath of ['llms.txt', 'humans.txt']) {
     if (existsSync(join(root, 'public', relativePath)) || existsSync(join(root, 'dist', relativePath))) {
