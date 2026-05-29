@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "BusyCode",
+  "short_name": "BusyCode",
+  "description": "A browser-based fake AI agent CLI simulator.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0c0b",
+  "theme_color": "#0b0c0b",
+  "lang": "en",
+  "categories": ["developer", "productivity", "entertainment"]
+}

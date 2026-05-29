@@ -2,6 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "busycode",
 	"compatibility_date": "2026-05-28",
+	"workers_dev": false,
 	"assets": {
 		"directory": "./dist",
 		"not_found_handling": "single-page-application"
