@@ -10,7 +10,7 @@
 		"lint": "eslint .",
 		"preview": "pnpm run build && vite preview",
 		"deploy": "pnpm run build && wrangler deploy",
-		"test:public-ready": "node --test scripts/verify-public-ready.test.mjs",
+		"test:public-ready": "node --test scripts/verify-public-ready.test.mjs scripts/verify-cli-start-gates.test.mjs",
 		"verify:public": "pnpm run build && pnpm run test:public-ready && node scripts/verify-public-ready.mjs"
 	},
 	"dependencies": {

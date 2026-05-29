@@ -9,10 +9,6 @@ const introDelay = 340
 const optionsDelay = 760
 const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 const claudeThinkingFrames = ['✻', '✳', '✢', '·']
-const defaultCodexPrompt = 'Improve BusyCode simulator and verify desktop TUI'
-const defaultClaudePrompt = 'Audit BusyCode and make the fake agent look convincing'
-const defaultGeminiPrompt = 'Recreate Gemini CLI status and transcript density'
-const defaultOpenCodePrompt = 'Recreate OpenCode TUI styling and keep the fake agent busy'
 
 type CodexTimelineEvent = {
   text: string
@@ -176,15 +172,15 @@ const buildOpenCodeSession = (prompt: string, agentMode: OpenCodeAgentMode): Ope
           '$ ls -la',
           '',
           'total 1280',
-          'drwxr-xr-x@ 25 my  staff   800 Apr 10 00:34 .',
-          'drwxr-xr-x@ 11 my  staff   352 Apr 10 00:00 ..',
-          'drwxr-xr-x@  7 my  staff   224 Apr 10 10:36 .codex',
-          '-rw-r--r--@  1 my  staff   475 Apr 10 00:26 .gitignore',
-          'drwxr-xr-x@ 10 my  staff   320 Apr 10 00:35 .omx',
-          'drwxr-xr-x@  3 my  staff    96 Apr 10 00:04 .vscode',
-          'drwxr-xr-x@  4 my  staff   128 Apr 10 00:34 .wrangler',
-          '-rw-r--r--@  1 my  staff 27560 Apr 10 00:26 AGENTS.md',
-          'drwxr-xr-x@  4 my  staff   128 Apr 10 00:34 dist',
+          'drwxr-xr-x@ 25 my   staff   800 Apr 10 00:34 .',
+          'drwxr-xr-x@ 11 my   staff   352 Apr 10 00:00 ..',
+          'drwxr-xr-x@  7 my   staff   224 Apr 10 10:36 .codex',
+          '-rw-r--r--@  1 my   staff   475 Apr 10 00:26 .gitignore',
+          'drwxr-xr-x@ 10 my   staff   320 Apr 10 00:35 .omx',
+          'drwxr-xr-x@  3 my   staff    96 Apr 10 00:04 .vscode',
+          'drwxr-xr-x@  4 my   staff   128 Apr 10 00:34 .wrangler',
+          '-rw-r--r--@  1 my   staff 27560 Apr 10 00:26 AGENTS.md',
+          'drwxr-xr-x@  4 my   staff   128 Apr 10 00:34 dist',
           '…',
         ],
         footer: 'Click to expand',
@@ -378,15 +374,12 @@ const buildGeminiTimeline = (prompt: string): GeminiTimelineEvent[] => {
   ]
 }
 
-const defaultGeminiTimeline = buildGeminiTimeline(defaultGeminiPrompt)
-const defaultOpenCodeSession = buildOpenCodeSession(defaultOpenCodePrompt, 'build')
-
 const claudeTimeline: ClaudeTimelineEvent[] = [
   {
     title: 'Explore(Deep codebase exploration)',
     lines: [
       '└ Read(vite.config.ts)',
-      '  Bash(find /Users/my/Desktop/job/monklabs/busycode/src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
+      '  Bash(find ~/Desktop/job/monklabs/busycode/src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
       '  Running…',
       '  +4 more tool uses (ctrl+o to expand)',
     ],
@@ -717,17 +710,17 @@ const codexTimeline: CodexTimelineEvent[] = [
 
 function CodexTui({ onExit, screenRef }: CodexTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
-  const [visibleEvents, setVisibleEvents] = useState<typeof codexTimeline>(() => codexTimeline.slice(0, 2))
-  const eventIndexRef = useRef(2)
+  const [visibleEvents, setVisibleEvents] = useState<typeof codexTimeline>(() => [])
+  const eventIndexRef = useRef(0)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
-  const [totalEvents, setTotalEvents] = useState(2)
+  const [totalEvents, setTotalEvents] = useState(0)
   const [spinnerIndex, setSpinnerIndex] = useState(0)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [draft, setDraft] = useState('')
-  const [submittedPrompt, setSubmittedPrompt] = useState(defaultCodexPrompt)
-  const [hasStarted, setHasStarted] = useState(true)
-  const [isRunning, setIsRunning] = useState(true)
+  const [submittedPrompt, setSubmittedPrompt] = useState('')
+  const [hasStarted, setHasStarted] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
   const [exitArmed, setExitArmed] = useState(false)
   const activeEvent = codexTimeline[Math.max(0, totalEvents - 1) % codexTimeline.length]
   const isThinking = activeEvent.mode === 'thinking'
@@ -871,7 +864,10 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
 
       if (event.key === 'Enter') {
         event.preventDefault()
-        const prompt = draftRef.current.trim() || defaultCodexPrompt
+        const prompt = draftRef.current.trim()
+        if (!prompt) {
+          return
+        }
         setSubmittedPrompt(prompt)
         updateDraft('')
         setHasStarted(true)
@@ -995,18 +991,15 @@ function ClaudeCodeTui({ onExit, screenRef, displayName }: ClaudeCodeTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
-  const timelineIndexRef = useRef(1)
+  const timelineIndexRef = useRef(0)
   const [draft, setDraft] = useState('')
   const [exitArmed, setExitArmed] = useState(false)
-  const [hasStarted, setHasStarted] = useState(true)
-  const [isRunning, setIsRunning] = useState(true)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
   const [thinkingFrameIndex, setThinkingFrameIndex] = useState(0)
-  const [recentActivity, setRecentActivity] = useState(`> ${defaultClaudePrompt}`)
-  const [activeStep, setActiveStep] = useState<ClaudeTimelineEvent | null>(() => claudeTimeline[0])
-  const [transcript, setTranscript] = useState<ClaudeTranscriptItem[]>(() => [
-    { type: 'user', text: defaultClaudePrompt },
-    { type: 'tool', title: claudeTimeline[0].title, lines: claudeTimeline[0].lines },
-  ])
+  const [recentActivity, setRecentActivity] = useState('')
+  const [activeStep, setActiveStep] = useState<ClaudeTimelineEvent | null>(null)
+  const [transcript, setTranscript] = useState<ClaudeTranscriptItem[]>(() => [])
 
   const updateDraft = (nextDraft: string) => {
     draftRef.current = nextDraft
@@ -1321,24 +1314,16 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
-  const timelineIndexRef = useRef(1)
+  const timelineIndexRef = useRef(0)
   const [draft, setDraft] = useState('')
   const [exitArmed, setExitArmed] = useState(false)
-  const [hasStarted, setHasStarted] = useState(true)
-  const [isRunning, setIsRunning] = useState(true)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
   const [spinnerIndex, setSpinnerIndex] = useState(0)
-  const [submittedPrompt, setSubmittedPrompt] = useState(defaultGeminiPrompt)
-  const [transcript, setTranscript] = useState<GeminiTranscriptItem[]>(() => [
-    { type: 'user', text: defaultGeminiPrompt },
-    {
-      type: 'thinking',
-      text: defaultGeminiTimeline[0].title,
-      hint: defaultGeminiTimeline[0].detail,
-      ultra: defaultGeminiTimeline[0].ultra,
-    },
-  ])
-  const [activeEvent, setActiveEvent] = useState<GeminiTimelineEvent | null>(() => defaultGeminiTimeline[0])
-  const [timeline, setTimeline] = useState<GeminiTimelineEvent[]>(() => defaultGeminiTimeline)
+  const [submittedPrompt, setSubmittedPrompt] = useState('')
+  const [transcript, setTranscript] = useState<GeminiTranscriptItem[]>(() => [])
+  const [activeEvent, setActiveEvent] = useState<GeminiTimelineEvent | null>(null)
+  const [timeline, setTimeline] = useState<GeminiTimelineEvent[]>(() => [])
   const workspacePath = '~/.../busycode'
 
   const updateDraft = (nextDraft: string) => {
@@ -1742,18 +1727,18 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
-  const timelineIndexRef = useRef(1)
+  const timelineIndexRef = useRef(0)
   const [draft, setDraft] = useState('')
   const [exitArmed, setExitArmed] = useState(false)
-  const [hasStarted, setHasStarted] = useState(true)
-  const [isRunning, setIsRunning] = useState(true)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
   const [spinnerIndex, setSpinnerIndex] = useState(0)
   const [agentMode, setAgentMode] = useState<OpenCodeAgentMode>('build')
-  const [submittedPrompt, setSubmittedPrompt] = useState(defaultOpenCodePrompt)
-  const [transcript, setTranscript] = useState<OpenCodeTranscriptItem[]>(() => [defaultOpenCodeSession.timeline[0]])
-  const [activeText, setActiveText] = useState(defaultOpenCodeSession.timeline[0].activeText)
+  const [submittedPrompt, setSubmittedPrompt] = useState('')
+  const [transcript, setTranscript] = useState<OpenCodeTranscriptItem[]>(() => [])
+  const [activeText, setActiveText] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [sessionData, setSessionData] = useState<OpenCodeSessionData | null>(() => defaultOpenCodeSession)
+  const [sessionData, setSessionData] = useState<OpenCodeSessionData | null>(null)
   const workspacePath = '~/.../busycode'
   const sessionModel = 'claude-sonnet-4'
   const sessionProvider = 'opencode zen'
@@ -1890,7 +1875,10 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
 
       if (event.key === 'Enter') {
         event.preventDefault()
-        const prompt = draftRef.current.trim() || 'Summarize the OpenCode TUI source'
+        const prompt = draftRef.current.trim()
+        if (!prompt) {
+          return
+        }
         const nextSession = buildOpenCodeSession(prompt, agentMode)
         timelineIndexRef.current = 0
         setSubmittedPrompt(prompt)
