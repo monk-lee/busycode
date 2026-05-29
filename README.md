@@ -14,8 +14,9 @@ pnpm dev
 ## Verification
 
 ```sh
-pnpm lint
-pnpm run build
+pnpm run verify:public
+pnpm run lint
+pnpm audit
 ```
 
 The Cloudflare deploy step may print a Wrangler debug-log permission warning in restricted sandboxes, but the static asset build should still complete.
@@ -27,3 +28,9 @@ BusyCode is deployed as Cloudflare Workers Static Assets. Static assets are serv
 ```sh
 pnpm run deploy
 ```
+
+## Public Repository Notes
+
+- Security reports should not be filed as public issues. See [SECURITY.md](SECURITY.md).
+- BusyCode does not intentionally collect user data or call external providers from the browser. See [PRIVACY.md](PRIVACY.md).
+- This project does not currently publish npm packages or signed release artifacts.
