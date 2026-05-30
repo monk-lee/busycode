@@ -8,6 +8,14 @@ import { collectPublicReadyIssues } from './verify-public-ready.mjs'
 
 const siteUrl = 'https://busycode.monklabs.dev/'
 const ogImageUrl = 'https://busycode.monklabs.dev/og-image.png'
+const securityHeaders = `/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: accelerometer=(), ambient-light-sensor=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' about: https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests
+`
 
 function pngHeader(width, height) {
   const buffer = Buffer.alloc(24)
@@ -107,6 +115,7 @@ async function writeFixture(root, overrides = {}) {
   </url>
 </urlset>`,
   )
+  await writeFile(join(root, 'public', '_headers'), overrides.headers ?? securityHeaders)
   await writeFile(
     join(root, 'public', 'site.webmanifest'),
     overrides.manifest ??
@@ -129,6 +138,7 @@ async function writeFixture(root, overrides = {}) {
   )
   await writeFile(join(root, 'dist', 'robots.txt'), overrides.robots ?? `User-agent: *\nAllow: /\n\nSitemap: ${siteUrl}sitemap.xml\n`)
   await writeFile(join(root, 'dist', 'sitemap.xml'), await readFile(join(root, 'public', 'sitemap.xml'), 'utf8'))
+  await writeFile(join(root, 'dist', '_headers'), await readFile(join(root, 'public', '_headers'), 'utf8'))
   await writeFile(join(root, 'dist', 'site.webmanifest'), await readFile(join(root, 'public', 'site.webmanifest'), 'utf8'))
   for (const [relativePath, width, height] of [
     ['favicon-32.png', 32, 32],
@@ -226,6 +236,23 @@ test('reports missing public repository controls', async () => {
     assert(issues.some((issue) => issue.includes('user data flow')))
     assert(issues.some((issue) => issue.includes('package-ecosystem: "npm"')))
     assert(issues.some((issue) => issue.includes('does not intentionally collect')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('reports missing security headers', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'busycode-public-ready-headers-broken-'))
+
+  try {
+    await writeFixture(root, {
+      headers: '/*\n  X-Content-Type-Options: nosniff\n',
+    })
+    const issues = await collectPublicReadyIssues(root)
+
+    assert(issues.some((issue) => issue.includes('Strict-Transport-Security')))
+    assert(issues.some((issue) => issue.includes('Content-Security-Policy')))
+    assert(issues.some((issue) => issue.includes('frame-ancestors')))
   } finally {
     await rm(root, { recursive: true, force: true })
   }

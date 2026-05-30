@@ -208,6 +208,46 @@ function validateSitemap(text, issues, label) {
   }
 }
 
+function validateSecurityHeaders(text, issues, label) {
+  const requiredHeaders = [
+    '/*',
+    'Strict-Transport-Security: max-age=31536000; includeSubDomains',
+    'X-Content-Type-Options: nosniff',
+    'Referrer-Policy: strict-origin-when-cross-origin',
+    'X-Frame-Options: DENY',
+    'Permissions-Policy:',
+    'Content-Security-Policy:',
+  ]
+
+  for (const header of requiredHeaders) {
+    requireIncludes(issues, text, header, `${label} must include ${header}`)
+  }
+
+  const csp = text.match(/^\s*Content-Security-Policy:\s*(.+)$/m)?.[1] ?? ''
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self' https://challenges.cloudflare.com",
+    "frame-src 'self' about: https://challenges.cloudflare.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+    "manifest-src 'self'",
+    'upgrade-insecure-requests',
+  ]
+
+  for (const directive of cspDirectives) {
+    requireIncludes(issues, csp, directive, `${label} Content-Security-Policy must include ${directive}`)
+  }
+
+  if (csp.includes("'unsafe-eval'")) {
+    issues.push(`${label} Content-Security-Policy must not allow unsafe-eval`)
+  }
+}
+
 function validateManifest(manifest, issues, label) {
   if (!manifest) {
     return
@@ -436,6 +476,7 @@ export async function collectPublicReadyIssues(root = process.cwd()) {
 
   await validateCopiedAsset(root, issues, 'robots.txt', validateRobots)
   await validateCopiedAsset(root, issues, 'sitemap.xml', validateSitemap)
+  await validateCopiedAsset(root, issues, '_headers', validateSecurityHeaders)
 
   const publicManifest = await readJson(join(root, 'public', 'site.webmanifest'), issues, 'public/site.webmanifest')
   const distManifest = await readJson(join(root, 'dist', 'site.webmanifest'), issues, 'dist/site.webmanifest')
