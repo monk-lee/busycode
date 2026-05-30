@@ -72,3 +72,9 @@ test('CLI screens wait for typed input before starting work', () => {
     }
   }
 })
+
+test('app does not personalize CLI screens from URL query parameters', () => {
+  assert(!appSource.includes('URLSearchParams'), 'App must not read URL query parameters')
+  assert(!appSource.includes('window.location.search'), 'App must not inspect location.search')
+  assert(!appSource.includes('displayName='), 'CLI screens must not accept URL-derived display names')
+})

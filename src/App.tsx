@@ -31,7 +31,6 @@ type CodexTuiProps = {
 type ClaudeCodeTuiProps = {
   onExit: () => void
   screenRef: RefObject<HTMLElement | null>
-  displayName: string
 }
 
 type ClaudeTimelineEvent = {
@@ -987,7 +986,7 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
   )
 }
 
-function ClaudeCodeTui({ onExit, screenRef, displayName }: ClaudeCodeTuiProps) {
+function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
@@ -1186,9 +1185,9 @@ function ClaudeCodeTui({ onExit, screenRef, displayName }: ClaudeCodeTuiProps) {
           <section className='claude-card-shell' aria-label='Claude Code welcome'>
             <div className='claude-card'>
               <div className='claude-pane claude-pane-left'>
-                <p className='claude-welcome'>Welcome back {displayName}!</p>
+                <p className='claude-welcome'>Welcome back BusyCode!</p>
                 <ClaudePixelAvatar />
-                <p className='claude-meta'>Opus 4.6 (1M context) with hi… · Claude Max · {displayName}</p>
+                <p className='claude-meta'>Opus 4.6 (1M context) with hi… · Claude Max · BusyCode</p>
                 <p className='claude-path'>~/.../busycode</p>
               </div>
 
@@ -2071,8 +2070,6 @@ function App() {
   const claudeScreenRef = useRef<HTMLElement>(null)
   const geminiScreenRef = useRef<HTMLElement>(null)
   const opencodeScreenRef = useRef<HTMLElement>(null)
-  const searchParams = new URLSearchParams(window.location.search)
-  const displayName = searchParams.get('name')?.trim() || 'BusyCode'
   const selectedIndexRef = useRef(0)
   const cliReadyRef = useRef(false)
   const submittedNameRef = useRef('')
@@ -2234,7 +2231,6 @@ function App() {
             submittedNameRef.current = ''
             setSubmittedName('')
           }}
-          displayName={displayName}
           screenRef={claudeScreenRef}
         />
       </main>
