@@ -78,3 +78,19 @@ test('app does not personalize CLI screens from URL query parameters', () => {
   assert(!appSource.includes('window.location.search'), 'App must not inspect location.search')
   assert(!appSource.includes('displayName='), 'CLI screens must not accept URL-derived display names')
 })
+
+test('fake CLI providers only use neutral workspace paths', () => {
+  const forbiddenPathPatterns = [
+    [/~\/Desktop\b/, 'home Desktop paths'],
+    [/\/Users\//, 'absolute user paths'],
+    [/Desktop\/job\b/, 'local job folder paths'],
+    [/monklabs\/busycode\b/, 'internal repository paths'],
+    [/~\/\.\.\//, 'shortened local repository paths'],
+  ]
+
+  for (const [pattern, description] of forbiddenPathPatterns) {
+    assert(!pattern.test(appSource), `Fake CLI providers must not expose ${description}`)
+  }
+
+  assert(appSource.includes("const workspacePath = '~/workspace'"), 'fake CLI providers must use a neutral workspace path')
+})

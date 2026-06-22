@@ -4,6 +4,7 @@ import './App.css'
 
 const cliOptions = ['Claude Code', 'Codex', 'Gemini CLI', 'OpenCode']
 const startCommand = 'busycode'
+const workspacePath = '~/workspace'
 const typingDelay = 125
 const introDelay = 340
 const optionsDelay = 760
@@ -245,7 +246,7 @@ const buildGeminiTimeline = (prompt: string): GeminiTimelineEvent[] => {
     },
     {
       kind: 'tool',
-      title: `✓ Shell rg "${searchTarget}" src/App.tsx [current working directory ~/.../busycode]`,
+      title: `✓ Shell rg "${searchTarget}" src/App.tsx [cwd: ${workspacePath}]`,
       lines: [
         'type GeminiCliTuiProps = {',
         "const geminiTips = ['1. /help for more information', ...]",
@@ -378,7 +379,7 @@ const claudeTimeline: ClaudeTimelineEvent[] = [
     title: 'Explore(Deep codebase exploration)',
     lines: [
       '└ Read(vite.config.ts)',
-      '  Bash(find ~/Desktop/job/monklabs/busycode/src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
+      '  Bash(find src -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \\) | grep -v node_modules | head…)',
       '  Running…',
       '  +4 more tool uses (ctrl+o to expand)',
     ],
@@ -907,7 +908,7 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
             <span>gpt-5.4 high</span>
             <span className='codex-command'>/model</span>
             <span className='codex-muted'>directory</span>
-            <span>~/.../busycode</span>
+            <span>{workspacePath}</span>
             <span className='codex-mode'>Panic Work Mode</span>
           </div>
           <p className='codex-session-tip'>
@@ -1188,7 +1189,7 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
                 <p className='claude-welcome'>Welcome back BusyCode!</p>
                 <ClaudePixelAvatar />
                 <p className='claude-meta'>Opus 4.6 (1M context) with hi… · Claude Max · BusyCode</p>
-                <p className='claude-path'>~/.../busycode</p>
+                <p className='claude-path'>{workspacePath}</p>
               </div>
 
               <div className='claude-pane claude-pane-right'>
@@ -1323,8 +1324,6 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
   const [transcript, setTranscript] = useState<GeminiTranscriptItem[]>(() => [])
   const [activeEvent, setActiveEvent] = useState<GeminiTimelineEvent | null>(null)
   const [timeline, setTimeline] = useState<GeminiTimelineEvent[]>(() => [])
-  const workspacePath = '~/.../busycode'
-
   const updateDraft = (nextDraft: string) => {
     draftRef.current = nextDraft
     setDraft(nextDraft)
@@ -1738,7 +1737,6 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
   const [activeText, setActiveText] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [sessionData, setSessionData] = useState<OpenCodeSessionData | null>(null)
-  const workspacePath = '~/.../busycode'
   const sessionModel = 'claude-sonnet-4'
   const sessionProvider = 'opencode zen'
   const sessionVariant = 'max'
