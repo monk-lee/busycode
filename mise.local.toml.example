@@ -1,0 +1,3 @@
+[env]
+CLOUDFLARE_API_TOKEN = "replace-with-local-token"
+CLOUDFLARE_ACCOUNT_ID = "replace-with-account-id"

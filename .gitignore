@@ -29,6 +29,8 @@ dist-ssr
 !.dev.vars.example
 .env*
 !.env.example
+mise.local.toml
+.mise.local.toml
 .omx/
 .codex/*
 !.codex/agents/

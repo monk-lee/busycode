@@ -1,0 +1,3 @@
+[env]
+# Cloudflare credentials are intentionally local-only.
+# Copy mise.local.toml.example to mise.local.toml on machines that deploy.
