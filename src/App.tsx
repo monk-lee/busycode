@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { ChangeEvent, RefObject } from 'react'
 import './App.css'
 
 const cliOptions = ['Claude Code', 'Codex', 'Gemini CLI', 'OpenCode']
@@ -10,6 +10,8 @@ const introDelay = 340
 const optionsDelay = 760
 const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 const claudeThinkingFrames = ['✻', '✳', '✢', '·']
+
+const isComposingKeyboardEvent = (event: KeyboardEvent) => event.isComposing || event.key === 'Process'
 
 type CodexTimelineEvent = {
   text: string
@@ -24,12 +26,19 @@ type CodexTimelineEvent = {
   result?: string
 }
 
-type CodexTuiProps = {
+type KeyboardCaptureSync = (nextValue: string) => void
+
+type KeyboardCaptureProps = {
+  registerKeyboardCaptureSync: (sync: KeyboardCaptureSync) => () => void
+  clearKeyboardCaptureInput: () => void
+}
+
+type CodexTuiProps = KeyboardCaptureProps & {
   onExit: () => void
   screenRef: RefObject<HTMLElement | null>
 }
 
-type ClaudeCodeTuiProps = {
+type ClaudeCodeTuiProps = KeyboardCaptureProps & {
   onExit: () => void
   screenRef: RefObject<HTMLElement | null>
 }
@@ -47,12 +56,12 @@ type ClaudeTranscriptItem =
   | { type: 'tool'; title: string; lines: string[] }
   | { type: 'status'; text: string; hint?: string }
 
-type GeminiCliTuiProps = {
+type GeminiCliTuiProps = KeyboardCaptureProps & {
   onExit: () => void
   screenRef: RefObject<HTMLElement | null>
 }
 
-type OpenCodeTuiProps = {
+type OpenCodeTuiProps = KeyboardCaptureProps & {
   onExit: () => void
   screenRef: RefObject<HTMLElement | null>
 }
@@ -708,7 +717,7 @@ const codexTimeline: CodexTimelineEvent[] = [
   },
 ]
 
-function CodexTui({ onExit, screenRef }: CodexTuiProps) {
+function CodexTui({ onExit, screenRef, registerKeyboardCaptureSync, clearKeyboardCaptureInput }: CodexTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [visibleEvents, setVisibleEvents] = useState<typeof codexTimeline>(() => [])
   const eventIndexRef = useRef(0)
@@ -727,10 +736,12 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
   const activeLabel = isThinking ? 'Ultra Thinking' : 'Working'
   const contextLeft = Math.max(42, 88 - totalEvents * 2)
 
-  const updateDraft = (nextDraft: string) => {
+  const updateDraft = useCallback((nextDraft: string) => {
     draftRef.current = nextDraft
     setDraft(nextDraft)
-  }
+  }, [])
+
+  useEffect(() => registerKeyboardCaptureSync(updateDraft), [registerKeyboardCaptureSync, updateDraft])
 
   useEffect(() => {
     if (!hasStarted || !isRunning) {
@@ -862,6 +873,10 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
         return
       }
 
+      if (isComposingKeyboardEvent(event)) {
+        return
+      }
+
       if (event.key === 'Enter') {
         event.preventDefault()
         const prompt = draftRef.current.trim()
@@ -873,18 +888,8 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
         setHasStarted(true)
         setIsRunning(true)
         setExitArmed(false)
+        clearKeyboardCaptureInput()
         return
-      }
-
-      if (event.key === 'Backspace') {
-        event.preventDefault()
-        updateDraft(draftRef.current.slice(0, -1))
-        return
-      }
-
-      if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault()
-        updateDraft(`${draftRef.current}${event.key}`)
       }
     }
 
@@ -893,7 +898,7 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [exitArmed, hasStarted, isRunning, onExit, screenRef])
+  }, [clearKeyboardCaptureInput, exitArmed, hasStarted, isRunning, onExit, screenRef, updateDraft])
 
   return (
     <div className='codex-layout' ref={viewportRef}>
@@ -987,7 +992,7 @@ function CodexTui({ onExit, screenRef }: CodexTuiProps) {
   )
 }
 
-function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
+function ClaudeCodeTui({ onExit, screenRef, registerKeyboardCaptureSync, clearKeyboardCaptureInput }: ClaudeCodeTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
@@ -1001,10 +1006,12 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
   const [activeStep, setActiveStep] = useState<ClaudeTimelineEvent | null>(null)
   const [transcript, setTranscript] = useState<ClaudeTranscriptItem[]>(() => [])
 
-  const updateDraft = (nextDraft: string) => {
+  const updateDraft = useCallback((nextDraft: string) => {
     draftRef.current = nextDraft
     setDraft(nextDraft)
-  }
+  }, [])
+
+  useEffect(() => registerKeyboardCaptureSync(updateDraft), [registerKeyboardCaptureSync, updateDraft])
 
   const buildSearchQuery = (prompt: string) => {
     const trimmed = prompt.trim()
@@ -1132,6 +1139,10 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
         return
       }
 
+      if (isComposingKeyboardEvent(event)) {
+        return
+      }
+
       if (event.key === 'Enter') {
         event.preventDefault()
         const prompt = draftRef.current.trim()
@@ -1148,22 +1159,12 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
           }
           setTranscript((current) => [...current, userItem, webSearchItem].slice(-10))
           updateDraft('')
+          clearKeyboardCaptureInput()
           setHasStarted(true)
           setIsRunning(true)
           setExitArmed(false)
         }
         return
-      }
-
-      if (event.key === 'Backspace') {
-        event.preventDefault()
-        updateDraft(draftRef.current.slice(0, -1))
-        return
-      }
-
-      if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault()
-        updateDraft(`${draftRef.current}${event.key}`)
       }
     }
 
@@ -1172,7 +1173,7 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [exitArmed, hasStarted, isRunning, onExit, screenRef])
+  }, [clearKeyboardCaptureInput, exitArmed, hasStarted, isRunning, onExit, screenRef, updateDraft])
 
   return (
     <div className='claude-layout'>
@@ -1310,7 +1311,7 @@ function ClaudeCodeTui({ onExit, screenRef }: ClaudeCodeTuiProps) {
   )
 }
 
-function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
+function GeminiCliTui({ onExit, screenRef, registerKeyboardCaptureSync, clearKeyboardCaptureInput }: GeminiCliTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
@@ -1324,10 +1325,12 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
   const [transcript, setTranscript] = useState<GeminiTranscriptItem[]>(() => [])
   const [activeEvent, setActiveEvent] = useState<GeminiTimelineEvent | null>(null)
   const [timeline, setTimeline] = useState<GeminiTimelineEvent[]>(() => [])
-  const updateDraft = (nextDraft: string) => {
+  const updateDraft = useCallback((nextDraft: string) => {
     draftRef.current = nextDraft
     setDraft(nextDraft)
-  }
+  }, [])
+
+  useEffect(() => registerKeyboardCaptureSync(updateDraft), [registerKeyboardCaptureSync, updateDraft])
 
   const appendTranscriptItem = (item: GeminiTranscriptItem) => {
     setTranscript((current) => [...current, item].slice(-18))
@@ -1484,6 +1487,10 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
         return
       }
 
+      if (isComposingKeyboardEvent(event)) {
+        return
+      }
+
       if (event.key === 'Enter') {
         event.preventDefault()
         const prompt = draftRef.current.trim()
@@ -1495,6 +1502,7 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
           setSubmittedPrompt(prompt)
           setTranscript([{ type: 'user', text: prompt }])
           updateDraft('')
+          clearKeyboardCaptureInput()
           setHasStarted(true)
           setIsRunning(true)
           setActiveEvent(nextTimeline[0] ?? null)
@@ -1505,17 +1513,6 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
         setExitArmed(false)
         return
       }
-
-      if (event.key === 'Backspace') {
-        event.preventDefault()
-        updateDraft(draftRef.current.slice(0, -1))
-        return
-      }
-
-      if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault()
-        updateDraft(`${draftRef.current}${event.key}`)
-      }
     }
 
     document.addEventListener('keydown', handleKeyDown, true)
@@ -1523,7 +1520,7 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [exitArmed, hasStarted, isRunning, onExit, screenRef])
+  }, [clearKeyboardCaptureInput, exitArmed, hasStarted, isRunning, onExit, screenRef, timeline, updateDraft])
 
   return (
     <div className='gemini-layout'>
@@ -1721,7 +1718,7 @@ function GeminiCliTui({ onExit, screenRef }: GeminiCliTuiProps) {
   )
 }
 
-function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
+function OpenCodeTui({ onExit, screenRef, registerKeyboardCaptureSync, clearKeyboardCaptureInput }: OpenCodeTuiProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef('')
   const exitArmTimerRef = useRef<number | null>(null)
@@ -1745,10 +1742,12 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
   const spinnerHead = openCodeSpinnerPath[spinnerIndex % openCodeSpinnerPath.length]
   const spinnerTail = openCodeSpinnerPath[(spinnerIndex - 1 + openCodeSpinnerPath.length) % openCodeSpinnerPath.length]
 
-  const updateDraft = (nextDraft: string) => {
+  const updateDraft = useCallback((nextDraft: string) => {
     draftRef.current = nextDraft
     setDraft(nextDraft)
-  }
+  }, [])
+
+  useEffect(() => registerKeyboardCaptureSync(updateDraft), [registerKeyboardCaptureSync, updateDraft])
 
   useEffect(() => {
     return () => {
@@ -1854,6 +1853,10 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
         return
       }
 
+      if (isComposingKeyboardEvent(event)) {
+        return
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault()
 
@@ -1887,18 +1890,8 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
         setExitArmed(false)
         setActiveText('Starting session...')
         updateDraft('')
+        clearKeyboardCaptureInput()
         return
-      }
-
-      if (event.key === 'Backspace') {
-        event.preventDefault()
-        updateDraft(draftRef.current.slice(0, -1))
-        return
-      }
-
-      if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault()
-        updateDraft(`${draftRef.current}${event.key}`)
       }
     }
 
@@ -1907,7 +1900,7 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [agentMode, exitArmed, isRunning, onExit, screenRef])
+  }, [agentMode, clearKeyboardCaptureInput, exitArmed, isRunning, onExit, screenRef, updateDraft])
 
   if (!hasStarted || !sessionData) {
     return (
@@ -2064,6 +2057,7 @@ function OpenCodeTui({ onExit, screenRef }: OpenCodeTuiProps) {
 
 function App() {
   const inputRef = useRef<HTMLInputElement>(null)
+  const keyboardCaptureSyncRef = useRef<KeyboardCaptureSync>(() => {})
   const codexScreenRef = useRef<HTMLElement>(null)
   const claudeScreenRef = useRef<HTMLElement>(null)
   const geminiScreenRef = useRef<HTMLElement>(null)
@@ -2076,6 +2070,26 @@ function App() {
   const [typedCommand, setTypedCommand] = useState('')
   const [cliIntroVisible, setCliIntroVisible] = useState(false)
   const [cliReady, setCliReady] = useState(false)
+
+  const clearKeyboardCaptureInput = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+  }, [])
+
+  const registerKeyboardCaptureSync = useCallback((sync: KeyboardCaptureSync) => {
+    keyboardCaptureSyncRef.current = sync
+
+    return () => {
+      if (keyboardCaptureSyncRef.current === sync) {
+        keyboardCaptureSyncRef.current = () => {}
+      }
+    }
+  }, [])
+
+  const handleKeyboardCaptureChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    keyboardCaptureSyncRef.current(event.currentTarget.value)
+  }, [])
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -2152,6 +2166,7 @@ function App() {
         event.preventDefault()
         const selectedName = cliOptions[selectedIndexRef.current]
         submittedNameRef.current = selectedName
+        clearKeyboardCaptureInput()
         setSubmittedName(selectedName)
         return
       }
@@ -2163,6 +2178,7 @@ function App() {
         numericChoice <= cliOptions.length
       ) {
         event.preventDefault()
+        clearKeyboardCaptureInput()
         selectIndex(numericChoice - 1)
       }
     }
@@ -2173,7 +2189,7 @@ function App() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [])
+  }, [clearKeyboardCaptureInput])
 
   if (submittedName === 'Codex') {
     return (
@@ -2189,13 +2205,16 @@ function App() {
           aria-label='Terminal keyboard input'
           autoComplete='off'
           autoFocus
-          readOnly
+          onChange={handleKeyboardCaptureChange}
         />
         <CodexTui
+          registerKeyboardCaptureSync={registerKeyboardCaptureSync}
+          clearKeyboardCaptureInput={clearKeyboardCaptureInput}
           onExit={() => {
             if (document.fullscreenElement) {
               void document.exitFullscreen()
             }
+            clearKeyboardCaptureInput()
             submittedNameRef.current = ''
             setSubmittedName('')
           }}
@@ -2219,13 +2238,16 @@ function App() {
           aria-label='Terminal keyboard input'
           autoComplete='off'
           autoFocus
-          readOnly
+          onChange={handleKeyboardCaptureChange}
         />
         <ClaudeCodeTui
+          registerKeyboardCaptureSync={registerKeyboardCaptureSync}
+          clearKeyboardCaptureInput={clearKeyboardCaptureInput}
           onExit={() => {
             if (document.fullscreenElement) {
               void document.exitFullscreen()
             }
+            clearKeyboardCaptureInput()
             submittedNameRef.current = ''
             setSubmittedName('')
           }}
@@ -2249,13 +2271,16 @@ function App() {
           aria-label='Terminal keyboard input'
           autoComplete='off'
           autoFocus
-          readOnly
+          onChange={handleKeyboardCaptureChange}
         />
         <GeminiCliTui
+          registerKeyboardCaptureSync={registerKeyboardCaptureSync}
+          clearKeyboardCaptureInput={clearKeyboardCaptureInput}
           onExit={() => {
             if (document.fullscreenElement) {
               void document.exitFullscreen()
             }
+            clearKeyboardCaptureInput()
             submittedNameRef.current = ''
             setSubmittedName('')
           }}
@@ -2279,13 +2304,16 @@ function App() {
           aria-label='Terminal keyboard input'
           autoComplete='off'
           autoFocus
-          readOnly
+          onChange={handleKeyboardCaptureChange}
         />
         <OpenCodeTui
+          registerKeyboardCaptureSync={registerKeyboardCaptureSync}
+          clearKeyboardCaptureInput={clearKeyboardCaptureInput}
           onExit={() => {
             if (document.fullscreenElement) {
               void document.exitFullscreen()
             }
+            clearKeyboardCaptureInput()
             submittedNameRef.current = ''
             setSubmittedName('')
           }}
@@ -2303,7 +2331,7 @@ function App() {
         aria-label='Terminal keyboard input'
         autoComplete='off'
         autoFocus
-        readOnly
+        onChange={handleKeyboardCaptureChange}
       />
       <pre>
         <span className='prompt'>my@busycode</span>
