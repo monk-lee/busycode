@@ -94,3 +94,22 @@ test('fake CLI providers only use neutral workspace paths', () => {
 
   assert(appSource.includes("const workspacePath = '~/workspace'"), 'fake CLI providers must use a neutral workspace path')
 })
+
+test('terminal keyboard capture supports IME-composed input', () => {
+  assert(
+    appSource.includes('handleKeyboardCaptureChange'),
+    'terminal input must read committed input values from an onChange handler',
+  )
+  assert(
+    appSource.includes('onChange={handleKeyboardCaptureChange}'),
+    'terminal input must wire onChange so IME-composed text can update UI state',
+  )
+  assert(
+    appSource.includes('event.isComposing'),
+    'terminal key handling must ignore composition keydown events',
+  )
+  assert(
+    !/className='keyboard-capture'[\s\S]*?readOnly[\s\S]*?\/>/m.test(appSource),
+    'terminal input must not be readOnly because IME composition cannot commit into a readonly input',
+  )
+})
